@@ -28,6 +28,8 @@ class ExtractChanges(unittest.TestCase):
         ''')
         assert_equals({'up': None, 'down': 'DROP TABLE users'}, changes, 'No UP change')
 
+        assert_equals({'up': None, 'down': None}, dbsync.extract_changes(''), 'Empty')
+
     def test_is_not_confused_by_annotation_like_literals_in_sql(self):
         changes = dbsync.extract_changes('''
             -- @UP
