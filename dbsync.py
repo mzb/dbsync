@@ -1,10 +1,10 @@
 import re
 
 
-def extract_changes(sql):
-    UP_ANNOTATION_RE = re.compile(r'\s*--\s*@UP\s*', re.IGNORECASE)
-    DOWN_ANNOTATION_RE = re.compile(r'\s*--\s*@DOWN\s*', re.IGNORECASE)
+UP_ANNOTATION_RE = re.compile(r'\s*--\s*@UP\s*', re.IGNORECASE)
+DOWN_ANNOTATION_RE = re.compile(r'\s*--\s*@DOWN\s*', re.IGNORECASE)
 
+def extract_changes(sql):
     up_annot_line_num = down_annot_line_num = None
 
     lines = sql.split("\n")
