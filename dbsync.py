@@ -4,7 +4,7 @@ import re
 UP_ANNOTATION_RE = re.compile(r'\s*--\s*@UP\s*', re.IGNORECASE)
 DOWN_ANNOTATION_RE = re.compile(r'\s*--\s*@DOWN\s*', re.IGNORECASE)
 
-def extract_changes(sql):
+def parse_sql_migration(sql):
     up_annot_line_num = down_annot_line_num = None
 
     lines = sql.split("\n")
@@ -23,4 +23,5 @@ def extract_changes(sql):
     else:
         down_change = "\n".join(lines[down_annot_line_num + 1:]).strip()
 
-    return {'up': up_change, 'down': down_change}
+    migration = {'up': up_change, 'down': down_change}
+    return migration
