@@ -25,3 +25,22 @@ def parse_sql_migration(sql):
 
     migration = {'up': up_change, 'down': down_change}
     return migration
+
+def select_changes_to_run(migrations, schema_version=None, target_version=None):
+    schema_version = schema_version or 0
+    target_version = target_version or max([m['version'] for m in migrations])
+    selected = [];
+
+    if target_version > schema_version:
+        for migration in migrations:
+           if schema_version < migration['version'] <= target_version:
+               selected.append((migration['version'], migration['up']))
+        selected = sorted(selected)
+
+    elif target_version < schema_version:
+        for migration in migrations:
+           if schema_version >= migration['version'] > target_version:
+               selected.append((migration['version'], migration['down']))
+        selected = sorted(selected, reverse=True)
+
+    return selected 
