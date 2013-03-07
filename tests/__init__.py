@@ -1,3 +1,4 @@
+from subprocess import Popen, PIPE
 import unittest
 from nose.tools import *
 
@@ -50,10 +51,12 @@ class ParseMigrationCode(unittest.TestCase):
 class ExtractVersionFromName(unittest.TestCase):
 
     def test_extracts_version_from_filename(self):
-        assert_equals(201307005200, extract_version_from_name('201307005200_foo.sql'))
+        assert_equals(20130307005200, extract_version_from_name('20130307005200_foo.sql'))
 
     def test_extracts_version_from_filepath(self):
-        assert_equals(201307005200, extract_version_from_name('path/to/201307005200_foo.sql'))
+        assert_equals(
+                20130307005200, 
+                extract_version_from_name('path/to/20130307005200_foo.sql'))
 
 
 class SelectApplicableChanges(unittest.TestCase):
@@ -122,4 +125,26 @@ class SelectApplicableChanges(unittest.TestCase):
         assert_equals(
                 [],
                 select_applicable_changes(migrations, schema_version=3, target_version=3))
+
+
+class ExecuteDatabaseCommand(unittest.TestCase):
+
+    def setUp(self):
+        self.db = 'sqlite3 -bail tests/test.db'
+        p = Popen(self.db, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
+        p.communicate('''
+            CREATE TABLE schema_version (version INTEGER NOT NULL);
+            INSERT INTO schema_version VALUES (20130307005200);
+        ''')
+
+    def tearDown(self):
+        os.remove('tests/test.db')
+
+    def test_executes_command(self):
+        result = execute_db_command(self.db, 'SELECT version FROM schema_version;')
+        assert_equals('20130307005200\n', result)
+
+    @raises(DbSyncError)
+    def test_raises_error_when_command_cannot_be_executed(self):
+        execute_db_command(self.db, 'FUCKED')
 

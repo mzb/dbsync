@@ -1,9 +1,13 @@
 import re
 import os
+import subprocess
 
 
 UP_ANNOTATION_RE = re.compile(r'\s*--\s*@UP\s*', re.IGNORECASE)
 DOWN_ANNOTATION_RE = re.compile(r'\s*--\s*@DOWN\s*', re.IGNORECASE)
+
+class DbSyncError(Exception):
+    pass
 
 def parse_migration_code(sql):
     up_annot_line_num = down_annot_line_num = None
@@ -49,4 +53,19 @@ def select_applicable_changes(migrations, schema_version=None, target_version=No
                changes.append((migration['version'], migration['down']))
         changes = sorted(changes, reverse=True)
 
-    return changes 
+    return changes
+
+def execute_db_command(db, command):
+    p = subprocess.Popen(
+            db, 
+            stdin=subprocess.PIPE, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            shell=True)
+    stdout, stderr = p.communicate(command)
+
+    if stderr or p.returncode != 0:
+        raise DbSyncError(
+                '\n'.join(["Failed to execute: %s", "stderr: %s"]) % (command, stderr))
+
+    return stdout
