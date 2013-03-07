@@ -1,13 +1,13 @@
 import unittest
 from nose.tools import *
 
-import dbsync
+from dbsync import *
 
 
-class ParseSQLMigration(unittest.TestCase):
+class ParseMigrationCode(unittest.TestCase):
 
     def test_up_and_down_annotations(self):
-        migration = dbsync.parse_sql_migration('''
+        migration = parse_migration_code('''
             -- @UP
             CREATE TABLE users
             -- @DOWN
@@ -16,14 +16,14 @@ class ParseSQLMigration(unittest.TestCase):
         assert_equals({'up': 'CREATE TABLE users', 'down': 'DROP TABLE users'}, migration)
 
     def test_one_annotation_missing(self):
-        migration = dbsync.parse_sql_migration('''
+        migration = parse_migration_code('''
             -- @UP
             CREATE TABLE users
         ''')
         assert_equals({'up': 'CREATE TABLE users', 'down': None}, migration, 
                 'Missing @DOWN')
 
-        migration = dbsync.parse_sql_migration('''
+        migration = parse_migration_code('''
             -- @DOWN
             DROP TABLE users
         ''')
@@ -31,10 +31,10 @@ class ParseSQLMigration(unittest.TestCase):
                 'Missing @UP')
 
     def test_no_annotations(self):
-        assert_equals({'up': None, 'down': None}, dbsync.parse_sql_migration(''))
+        assert_equals({'up': None, 'down': None}, parse_migration_code(''))
 
     def test_annotation_like_literals_in_sql_statements(self):
-        migration = dbsync.parse_sql_migration('''
+        migration = parse_migration_code('''
             -- @UP
             INSERT INTO users VALUES (NULL, "-- @DOWN")
             -- @DOWN
@@ -47,7 +47,16 @@ class ParseSQLMigration(unittest.TestCase):
         assert_equals(expected, migration)
 
 
-class SelectChangesToRun(unittest.TestCase):
+class ExtractVersionFromName(unittest.TestCase):
+
+    def test_extracts_version_from_filename(self):
+        assert_equals(201307005200, extract_version_from_name('201307005200_foo.sql'))
+
+    def test_extracts_version_from_filepath(self):
+        assert_equals(201307005200, extract_version_from_name('path/to/201307005200_foo.sql'))
+
+
+class SelectApplicableChanges(unittest.TestCase):
 
     def test_no_target_version_no_schema_version(self):
         """Selects all up changes"""
@@ -59,7 +68,7 @@ class SelectChangesToRun(unittest.TestCase):
         expected = [
                 (1, 'UP 1'), (2, 'UP 2'), (3, 'UP 3')
         ]
-        assert_equals(expected, dbsync.select_changes_to_run(migrations))
+        assert_equals(expected, select_applicable_changes(migrations))
 
     def test_no_target_version_but_preset_schema_version(self):
         """Selects all up changes above schema version"""
@@ -73,7 +82,7 @@ class SelectChangesToRun(unittest.TestCase):
         ]
         assert_equals(
                 expected, 
-                dbsync.select_changes_to_run(migrations, schema_version=2))
+                select_applicable_changes(migrations, schema_version=2))
 
     def test_target_version_above_schema_version(self):
         """Selects up changes above schema version upto and including target"""
@@ -87,7 +96,7 @@ class SelectChangesToRun(unittest.TestCase):
         ]
         assert_equals(
                 expected, 
-                dbsync.select_changes_to_run(migrations, schema_version=1, target_version=3))
+                select_applicable_changes(migrations, schema_version=1, target_version=3))
 
     def test_target_version_below_schema_version(self):
         """Selects down changes from below schema version downto but not including target"""
@@ -101,7 +110,7 @@ class SelectChangesToRun(unittest.TestCase):
         ]
         assert_equals(
                 expected, 
-                dbsync.select_changes_to_run(migrations, schema_version=3, target_version=1))
+                select_applicable_changes(migrations, schema_version=3, target_version=1))
 
     def test_target_version_equal_schema_version(self):
         """Selects nothing"""
@@ -110,8 +119,7 @@ class SelectChangesToRun(unittest.TestCase):
                 {'version': 2, 'up': 'UP 2', 'down': 'DOWN 2'},
                 {'version': 3, 'up': 'UP 3', 'down': 'DOWN 3'},
         ]
-        expected = []
         assert_equals(
-                expected, 
-                dbsync.select_changes_to_run(migrations, schema_version=3, target_version=3))
+                [],
+                select_applicable_changes(migrations, schema_version=3, target_version=3))
 
