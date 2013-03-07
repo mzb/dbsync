@@ -127,18 +127,24 @@ class SelectApplicableChanges(unittest.TestCase):
                 select_applicable_changes(migrations, schema_version=3, target_version=3))
 
 
-class ExecuteDatabaseCommand(unittest.TestCase):
+class _TestWithDatabase(unittest.TestCase):
 
     def setUp(self):
         self.db = 'sqlite3 -bail tests/test.db'
+
+    def tearDown(self):
+        if os.path.exists('tests/test.db'): os.remove('tests/test.db')
+
+
+class ExecuteDatabaseCommand(_TestWithDatabase):
+
+    def setUp(self):
+        super(ExecuteDatabaseCommand, self).setUp()
         p = Popen(self.db, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
         p.communicate('''
             CREATE TABLE schema_version (version INTEGER NOT NULL);
             INSERT INTO schema_version VALUES (20130307005200);
         ''')
-
-    def tearDown(self):
-        os.remove('tests/test.db')
 
     def test_executes_command(self):
         result = execute_db_command(self.db, 'SELECT version FROM schema_version;')
@@ -148,3 +154,10 @@ class ExecuteDatabaseCommand(unittest.TestCase):
     def test_raises_error_when_command_cannot_be_executed(self):
         execute_db_command(self.db, 'FUCKED')
 
+
+# Pending
+# class ExecuteChange(_TestWithDatabase):
+
+#     def test_executes_change_sql_and_updates_schema_version(self):
+#         execute_change(self.db, (20130307005200, 'CREATE TABLE foo (id INTEGER NOT NULL);'))
+#         execute_db_command(self.db, 'SELECT id FROM foo;')

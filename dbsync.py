@@ -69,3 +69,7 @@ def execute_db_command(db, command):
                 '\n'.join(["Failed to execute: %s", "stderr: %s"]) % (command, stderr))
 
     return stdout
+
+def execute_change(db, change):
+    version, sql = change
+    execute_db_command(db, 'BEGIN;\n%s\n')
