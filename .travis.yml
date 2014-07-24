@@ -4,3 +4,6 @@ python:
 install: pip install nose
 before_script: python lol.py
 script: nosetests
+branches:
+  only:
+    - master
